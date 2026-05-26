@@ -1,0 +1,13 @@
+services:
+  whi-agency:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: whi-agency:latest
+    container_name: whi-agency
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    restart: unless-stopped
