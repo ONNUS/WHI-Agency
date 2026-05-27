@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { changePassword } from '../services/api';
 
 export default function ChangePasswordPage() {
+  useEffect(() => { document.title = 'Change Password | WHI Agency'; return () => { document.title = 'WHI Agency'; }; }, []);
   const { setUser } = useAuth();
   const navigate = useNavigate();
 

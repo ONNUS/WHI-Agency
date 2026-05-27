@@ -30,6 +30,8 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [error, setError] = useState('');
 
+  useEffect(() => { document.title = 'Dashboard | WHI Agency'; return () => { document.title = 'WHI Agency'; }; }, []);
+
   useEffect(() => {
     fetchStats()
       .then(setStats)

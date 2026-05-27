@@ -7,6 +7,7 @@ function formatDate(iso: string) {
 }
 
 export default function StaffPage() {
+  useEffect(() => { document.title = 'Staff | WHI Agency'; return () => { document.title = 'WHI Agency'; }; }, []);
   const [users, setUsers] = useState<UserPublic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

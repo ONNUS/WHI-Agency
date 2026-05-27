@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
+  useEffect(() => { document.title = 'Login | WHI Agency'; return () => { document.title = 'WHI Agency'; }; }, []);
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

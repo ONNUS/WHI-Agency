@@ -10,6 +10,8 @@ export default function StaffFormPage() {
 
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => { document.title = `${isNew ? 'New Operative' : 'Edit Operative'} | WHI Agency`; return () => { document.title = 'WHI Agency'; }; }, [isNew]);
   const [error, setError] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 

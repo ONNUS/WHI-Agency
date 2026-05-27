@@ -11,6 +11,8 @@ export default function BriefingsPage() {
   const [items, setItems] = useState<BriefingIndex[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+
+  useEffect(() => { document.title = 'Recon Briefings | WHI Agency'; return () => { document.title = 'WHI Agency'; }; }, []);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(true);

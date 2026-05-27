@@ -26,6 +26,7 @@ function formatDate(iso: string) {
 }
 
 export default function ProspectsPage() {
+  useEffect(() => { document.title = 'Prospects | WHI Agency'; return () => { document.title = 'WHI Agency'; }; }, []);
   const [items, setItems] = useState<ProspectIndex[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

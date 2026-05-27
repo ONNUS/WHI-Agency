@@ -33,6 +33,8 @@ export default function BriefingDetailPage() {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  useEffect(() => { document.title = 'Briefing Detail | WHI Agency'; return () => { document.title = 'WHI Agency'; }; }, []);
   const [rawOpen, setRawOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 

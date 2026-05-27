@@ -26,6 +26,7 @@ function formatDate(iso: string) {
 }
 
 export default function ProspectDetailPage() {
+  useEffect(() => { document.title = 'Prospect Detail | WHI Agency'; return () => { document.title = 'WHI Agency'; }; }, []);
   const { id } = useParams<{ id: string }>();
   const [prospect, setProspect] = useState<Prospect | null>(null);
   const [loading, setLoading] = useState(true);
