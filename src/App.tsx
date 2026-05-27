@@ -944,7 +944,7 @@ export default function App() {
               {/* Co-founder 2 */}
               <div className="space-y-1.5 sm:max-w-[45%]">
                 <span className="font-mono text-[10px] sm:text-xs text-[#bc993c] tracking-widest uppercase block font-semibold">
-                  Co-founder Chief Technologist
+                  Co-founder &amp; Chief Strategist
                 </span>
                 <h3 className="font-serif text-2xl sm:text-3xl font-bold text-stone-100 tracking-tight leading-tight">
                   Jasen Crockett
