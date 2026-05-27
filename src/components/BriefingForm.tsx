@@ -143,11 +143,26 @@ export default function BriefingForm({ onDiagnosticComplete, savedResult, onClea
     onClearResult();
   };
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactForm.name || !contactForm.email) {
       alert("Name and email are required to authorize briefing call.");
       return;
+    }
+    try {
+      await fetch("/api/prospects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: contactForm.name,
+          email: contactForm.email,
+          phone: contactForm.phone || undefined,
+          notes: contactForm.notes || undefined,
+          submissionId: savedResult?.submissionId,
+        }),
+      });
+    } catch {
+      // Non-blocking — contact save failure shouldn't break the UI
     }
     setContactSubmitted(true);
   };

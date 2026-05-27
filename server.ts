@@ -3,12 +3,71 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import * as dotenv from "dotenv";
+import cookieParser from "cookie-parser";
+import cors from "cors";
+
+// ─── Repositories ─────────────────────────────────────────────────────────────
+import { JsonUserRepository } from "./server/repositories/JsonUserRepository.js";
+import { JsonBriefingRepository } from "./server/repositories/JsonBriefingRepository.js";
+import { JsonProspectRepository } from "./server/repositories/JsonProspectRepository.js";
+
+// ─── Services ─────────────────────────────────────────────────────────────────
+import * as seedService from "./server/services/seedService.js";
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+import { createAdminAuthRouter } from "./server/routes/adminAuth.js";
+import { createAdminBriefingsRouter } from "./server/routes/adminBriefings.js";
+import { createAdminProspectsRouter } from "./server/routes/adminProspects.js";
+import { createAdminUsersRouter } from "./server/routes/adminUsers.js";
+import { createAdminStatsRouter } from "./server/routes/adminStats.js";
+import { createPublicProspectsRouter } from "./server/routes/publicProspects.js";
+
+// ─── Middleware ────────────────────────────────────────────────────────────────
+import { assessLimiter } from "./server/middleware/rateLimiter.js";
 
 dotenv.config();
 
+// ─── Data Repositories (singleton instances) ──────────────────────────────────
+const DATA_PATH = process.env.DATA_PATH ?? "./data/json/dna/questionnaire";
+const userRepo = new JsonUserRepository(DATA_PATH);
+const briefingRepo = new JsonBriefingRepository(DATA_PATH);
+const prospectRepo = new JsonProspectRepository(DATA_PATH);
+
 // Create Express app
 const app = express();
+
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+const corsOptions = {
+  origin:
+    process.env.NODE_ENV === "production"
+      ? process.env.ALLOWED_ORIGIN || "https://yourdomain.com"
+      : true, // allow all origins in development
+  credentials: true,
+};
+app.use(cors(corsOptions));
+
+// ─── Core middleware ──────────────────────────────────────────────────────────
 app.use(express.json());
+app.use(cookieParser());
+
+// ─── Sanitize helper ─────────────────────────────────────────────────────────
+function sanitize(s: string): string {
+  return s
+    .replace(/[<>`\\]/g, "")
+    .replace(/\[INST\]|\[\/INST\]|###/g, "")
+    .trim()
+    .slice(0, 2000);
+}
+
+// ─── Admin API routes ─────────────────────────────────────────────────────────
+app.use("/api/admin/auth", createAdminAuthRouter(userRepo));
+app.use("/api/admin/briefings", createAdminBriefingsRouter(briefingRepo));
+app.use("/api/admin/prospects", createAdminProspectsRouter(prospectRepo));
+app.use("/api/admin/users", createAdminUsersRouter(userRepo));
+app.use("/api/admin/stats", createAdminStatsRouter(briefingRepo, prospectRepo, userRepo));
+
+// ─── Public API routes ───────────────────────────────────────────────────────
+app.use("/api/prospects", createPublicProspectsRouter(prospectRepo));
 
 // Initialize Gemini Client
 const apiKey = process.env.GEMINI_API_KEY;
@@ -34,17 +93,27 @@ if (isApiKeyConfigured) {
 }
 
 // Q&A API Endpoint
-app.post("/api/assess", async (req, res) => {
+app.post("/api/assess", assessLimiter, async (req, res) => {
   const {
-    businessName,
-    industry,
-    location,
-    blueForceAnswers,
-    redForceAnswers,
-    greenForceAnswers,
-    battlespaceAnswers,
-    gapAnswers,
+    businessName: rawBusiness,
+    industry: rawIndustry,
+    location: rawLocation,
+    blueForceAnswers: rawBlue,
+    redForceAnswers: rawRed,
+    greenForceAnswers: rawGreen,
+    battlespaceAnswers: rawBattle,
+    gapAnswers: rawGap,
   } = req.body;
+
+  // Sanitize all inputs
+  const businessName = sanitize(String(rawBusiness || ""));
+  const industry = sanitize(String(rawIndustry || ""));
+  const location = sanitize(String(rawLocation || ""));
+  const blueForceAnswers = sanitize(String(rawBlue || ""));
+  const redForceAnswers = sanitize(String(rawRed || ""));
+  const greenForceAnswers = sanitize(String(rawGreen || ""));
+  const battlespaceAnswers = sanitize(String(rawBattle || ""));
+  const gapAnswers = sanitize(String(rawGap || ""));
 
   // Simple validation
   if (!businessName || !industry) {
@@ -117,9 +186,27 @@ app.post("/api/assess", async (req, res) => {
       const responseText = response.text;
       if (responseText) {
         const parsedReport = JSON.parse(responseText.trim());
+        const briefing = await briefingRepo.create({
+          businessName,
+          industry,
+          location,
+          blueForceAnswers,
+          redForceAnswers,
+          greenForceAnswers,
+          battlespaceAnswers,
+          gapAnswers,
+          scores: parsedReport.scores,
+          overallScore: parsedReport.overallScore,
+          criticalVulnerability: parsedReport.criticalVulnerability,
+          asymmetricLeverage: parsedReport.asymmetricLeverage,
+          combatPlan90Days: parsedReport.combatPlan90Days,
+          executiveSummary: parsedReport.executiveSummary,
+          isGeminiLive: true,
+        });
         return res.json({
           ...parsedReport,
           isGeminiLive: true,
+          submissionId: briefing.id,
         });
       }
     } catch (apiError) {
@@ -176,7 +263,7 @@ app.post("/api/assess", async (req, res) => {
     criticalVulnerability = "Blue Force Disruption: Suboptimal core offer framing and internal execution skill gaps. High-tier executive time is being consumed by standard lower-yielding tasks.";
   }
 
-  res.json({
+  const fallbackResult = {
     scores: {
       blue: blueScore,
       red: redScore,
@@ -192,14 +279,42 @@ app.post("/api/assess", async (req, res) => {
       phase2: `Days 31–60: Standardize ${blueScore < 6 ? "offer packaging" : "digital twin automations"}. Introduce automated customer qualifiers to protect the core delivery pipeline.`,
       phase3: `Days 61–90: Deploy Red Force shadow positioning. Launch highly differentiated, strategic campaigns targeting market share voids.`,
     },
-    isGeminiLive: false,
     executiveSummary: `Reconnaissance Briefing authorized for ${businessName}. While scaling parameters show operational promise in ${industry}, fundamental vulnerabilities in systems integration and tactical insulation must be patched before launching capital projects.`,
+  };
+
+  const briefing = await briefingRepo.create({
+    businessName,
+    industry,
+    location,
+    blueForceAnswers,
+    redForceAnswers,
+    greenForceAnswers,
+    battlespaceAnswers,
+    gapAnswers,
+    scores: fallbackResult.scores,
+    overallScore: fallbackResult.overallScore,
+    criticalVulnerability: fallbackResult.criticalVulnerability,
+    asymmetricLeverage: fallbackResult.asymmetricLeverage,
+    combatPlan90Days: fallbackResult.combatPlan90Days,
+    executiveSummary: fallbackResult.executiveSummary,
+    isGeminiLive: false,
+  });
+
+  res.json({
+    ...fallbackResult,
+    isGeminiLive: false,
+    submissionId: briefing.id,
   });
 });
 
 // Start serve pipeline
 async function startServer() {
-  const PORT = 3000;
+  const PORT = parseInt(process.env.PORT ?? '3000', 10);
+
+  // ─── Startup tasks ────────────────────────────────────────────────────────
+  await seedService.seed(userRepo);
+  await briefingRepo.reconcileIndex();
+  await prospectRepo.reconcileIndex();
 
   if (process.env.NODE_ENV !== "production") {
     console.log("Vite is running in Development mode; mounting middleware engine...");

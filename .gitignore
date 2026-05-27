@@ -6,3 +6,6 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# User data — never commit
+data/

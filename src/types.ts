@@ -35,4 +35,6 @@ export interface DiagnosticResult {
     phase3: string; // Days 61-90: Velocity Generation
   };
   executiveSummary: string;
+  isGeminiLive?: boolean;
+  submissionId?: string;
 }

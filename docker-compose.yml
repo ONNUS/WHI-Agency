@@ -10,4 +10,14 @@ services:
     environment:
       NODE_ENV: production
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev_access_secret_change_in_prod}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_in_prod}
+      ADMIN_SEED_PASSWORD: ${ADMIN_SEED_PASSWORD:-000111}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      DATA_PATH: /app/data/json/dna/questionnaire
+    volumes:
+      - whi_data:/app/data
     restart: unless-stopped
+
+volumes:
+  whi_data:
